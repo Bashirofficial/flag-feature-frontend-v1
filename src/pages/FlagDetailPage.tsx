@@ -1,19 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { apiService } from '../services/api';
+import React, { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { apiService } from "../services/api";
 
+// Update interface to match actual API response (nested structure)
 interface EnvironmentValue {
-  environmentId: string;
-  environmentName: string;
-  environmentKey: string;
-  value: boolean | string | number;
+  value: string | number | boolean | Record<string, unknown> | null;
+  environment: {
+    id: string;
+    name: string;
+    key: string;
+  };
 }
 
 interface Flag {
   id: string;
   key: string;
+  name: string;
   description: string;
+  type: string;
+  isActive: boolean;
   createdAt: string;
+  updatedAt: string;
   environmentValues: EnvironmentValue[];
 }
 
@@ -21,20 +28,20 @@ export const FlagDetailPage: React.FC = () => {
   const { flagId } = useParams<{ flagId: string }>();
   const [flag, setFlag] = useState<Flag | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [editingEnv, setEditingEnv] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [editValue, setEditValue] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const fetchFlag = async () => {
     if (!flagId) return;
-    
+
     try {
       const data = await apiService.getFlag(flagId);
       setFlag(data);
-      setError('');
+      setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load flag');
+      setError(err instanceof Error ? err.message : "Failed to load flag");
     } finally {
       setIsLoading(false);
     }
@@ -45,9 +52,9 @@ export const FlagDetailPage: React.FC = () => {
   }, [flagId]);
 
   const handleEdit = (envValue: EnvironmentValue) => {
-    setEditingEnv(envValue.environmentId);
+    setEditingEnv(envValue.environment.id);
     setEditValue(String(envValue.value));
-    setSuccessMessage('');
+    setSuccessMessage("");
   };
 
   const handleSave = async (environmentId: string) => {
@@ -55,41 +62,52 @@ export const FlagDetailPage: React.FC = () => {
 
     try {
       // Attempt to parse as boolean or number
-      let parsedValue: boolean | string | number = editValue;
-      if (editValue.toLowerCase() === 'true') parsedValue = true;
-      else if (editValue.toLowerCase() === 'false') parsedValue = false;
+      let parsedValue: any = editValue;
+      if (editValue.toLowerCase() === "true") parsedValue = true;
+      else if (editValue.toLowerCase() === "false") parsedValue = false;
       else if (!isNaN(Number(editValue))) parsedValue = Number(editValue);
 
-      await apiService.updateFlagEnvironmentValue(flagId, environmentId, parsedValue);
-      
+      await apiService.updateFlagEnvironmentValue(
+        flagId,
+        environmentId,
+        parsedValue,
+      );
+
       setEditingEnv(null);
-      setSuccessMessage('Value updated successfully');
-      
+      setSuccessMessage("Value updated successfully");
+
       // Refresh flag data
       await fetchFlag();
-      
+
       // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update value');
+      setError(err instanceof Error ? err.message : "Failed to update value");
     }
   };
 
   const handleCancel = () => {
     setEditingEnv(null);
-    setEditValue('');
+    setEditValue("");
   };
 
-  const toggleBoolean = async (environmentId: string, currentValue: boolean) => {
+  const toggleBoolean = async (
+    environmentId: string,
+    currentValue: boolean,
+  ) => {
     if (!flagId) return;
 
     try {
-      await apiService.updateFlagEnvironmentValue(flagId, environmentId, !currentValue);
-      setSuccessMessage('Value toggled successfully');
+      await apiService.updateFlagEnvironmentValue(
+        flagId,
+        environmentId,
+        !currentValue,
+      );
+      setSuccessMessage("Value toggled successfully");
       await fetchFlag();
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle value');
+      setError(err instanceof Error ? err.message : "Failed to toggle value");
     }
   };
 
@@ -142,7 +160,9 @@ export const FlagDetailPage: React.FC = () => {
       )}
 
       <div>
-        <h2 className="text-sm font-medium text-gray-700 mb-3">Environment Values</h2>
+        <h2 className="text-sm font-medium text-gray-700 mb-3">
+          Environment Values
+        </h2>
         <div className="bg-white border border-gray-200 rounded overflow-hidden">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -160,15 +180,17 @@ export const FlagDetailPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {flag.environmentValues.map((envValue) => (
-                <tr key={envValue.environmentId}>
+                <tr key={envValue.environment.id}>
                   <td className="px-4 py-3">
                     <div className="text-sm font-medium text-gray-900">
-                      {envValue.environmentName}
+                      {envValue.environment.name}
                     </div>
-                    <div className="text-xs text-gray-500">{envValue.environmentKey}</div>
+                    <div className="text-xs text-gray-500">
+                      {envValue.environment.key}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    {editingEnv === envValue.environmentId ? (
+                    {editingEnv === envValue.environment.id ? (
                       <input
                         type="text"
                         value={editValue}
@@ -178,15 +200,17 @@ export const FlagDetailPage: React.FC = () => {
                       />
                     ) : (
                       <span className="text-sm font-mono text-gray-900">
-                        {String(envValue.value)}
+                        {typeof envValue.value === "object"
+                          ? JSON.stringify(envValue.value)
+                          : String(envValue.value)}
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {editingEnv === envValue.environmentId ? (
+                    {editingEnv === envValue.environment.id ? (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleSave(envValue.environmentId)}
+                          onClick={() => handleSave(envValue.environment.id)}
                           className="px-3 py-1 bg-gray-900 text-white text-xs rounded hover:bg-gray-800"
                         >
                           Save
@@ -200,14 +224,23 @@ export const FlagDetailPage: React.FC = () => {
                       </div>
                     ) : (
                       <div className="flex gap-2">
-                        {typeof envValue.value === 'boolean' && (
-                          <button
-                            onClick={() => toggleBoolean(envValue.environmentId, envValue.value)}
-                            className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200"
-                          >
-                            Toggle
-                          </button>
-                        )}
+                        {typeof envValue.value === "boolean" &&
+                          (() => {
+                            const isBoolValue = envValue.value; // TypeScript narrows this to 'boolean'
+                            return (
+                              <button
+                                onClick={() =>
+                                  toggleBoolean(
+                                    envValue.environment.id,
+                                    isBoolValue,
+                                  )
+                                }
+                                className="..."
+                              >
+                                Toggle
+                              </button>
+                            );
+                          })()}
                         <button
                           onClick={() => handleEdit(envValue)}
                           className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200"
