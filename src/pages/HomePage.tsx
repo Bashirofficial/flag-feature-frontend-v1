@@ -1,10 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { apiService } from '../services/api';
+import React, { useEffect, useState } from "react";
+import { apiService } from "../services/api";
+
+interface Environment {
+  id: string;
+  name: string;
+  key: string;
+  description: string;
+  sortOrder: number;
+  apiKeyCount: number;
+  flagCount: number;
+}
 
 interface Organization {
   id: string;
   name: string;
-  environments: Array<{ id: string; name: string; key: string }>;
+  slug: string;
 }
 
 interface Stats {
@@ -15,21 +25,26 @@ interface Stats {
 
 export const HomePage: React.FC = () => {
   const [organization, setOrganization] = useState<Organization | null>(null);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [orgData, statsData] = await Promise.all([
+        // Fetch all data in parallel
+        const [orgData, envsData, statsData] = await Promise.all([
           apiService.getOrganization(),
+          apiService.getEnvironments(),
           apiService.getStats(),
         ]);
+
         setOrganization(orgData);
+        setEnvironments(envsData);
         setStats(statsData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+        setError(err instanceof Error ? err.message : "Failed to load data");
       } finally {
         setIsLoading(false);
       }
@@ -59,19 +74,21 @@ export const HomePage: React.FC = () => {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">
-        {organization?.name || 'Dashboard'}
+        {organization?.name || "Dashboard"}
       </h1>
 
       {/* Environments */}
       <div className="mb-8">
         <h2 className="text-sm font-medium text-gray-700 mb-3">Environments</h2>
         <div className="flex gap-3">
-          {organization?.environments.map((env) => (
+          {environments.map((env) => (
             <div
               key={env.id}
               className="px-4 py-3 bg-white border border-gray-200 rounded"
             >
-              <div className="text-sm font-medium text-gray-900">{env.name}</div>
+              <div className="text-sm font-medium text-gray-900">
+                {env.name}
+              </div>
               <div className="text-xs text-gray-500 mt-1">{env.key}</div>
             </div>
           ))}
