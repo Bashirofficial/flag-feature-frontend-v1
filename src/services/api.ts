@@ -328,17 +328,22 @@ class ApiService {
       logs: Array<{
         id: string;
         action: string;
-        target: string;
-        environment: string;
+        resourceType: string;
+        resourceId: string | null;
+        resourceName: string | null;
+        environmentKey: string | null;
+        changes?: Record<string, unknown>;
+        ipAddress: string | null;
+        userAgent: string | null;
         timestamp: string;
         userId: string;
         userEmail: string;
-        changes?: any;
       }>;
       pagination: {
         page: number;
         totalPages: number;
         totalItems: number;
+        pageSize: number;
       };
     }>(`/audit-logs${query ? `?${query}` : ""}`);
   }
