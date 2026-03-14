@@ -68,7 +68,7 @@ export const FlagDetailPage: React.FC = () => {
 
     setSavingEnv(environmentId);
     try {
-      let parsedValue: any = editValue;
+      let parsedValue: FlagValue = editValue;
 
       // Try to parse JSON
       if (
