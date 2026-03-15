@@ -9,7 +9,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": {
-        target: "https://flag-feature-backend-v1.vercel.app",
+        target: "https://flag-feature-backend-v1.vercel.app/",
         changeOrigin: true,
       },
     },
